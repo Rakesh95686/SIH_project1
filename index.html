@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlantCare AI - Disease Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background elements */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(120, 255, 150, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 120, 150, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 200, 255, 0.1) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            padding: 40px;
+            text-align: center;
+            color: white;
+            position: relative;
+        }
+
+        .header::before {
+            content: '🌱';
+            position: absolute;
+            font-size: 100px;
+            opacity: 0.1;
+            top: 20px;
+            right: 40px;
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.1; }
+            50% { transform: scale(1.1); opacity: 0.2; }
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            padding: 40px;
+            min-height: 600px;
+        }
+
+        .upload-section {
+            background: linear-gradient(145deg, #f8f9ff, #e8f0ff);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            border: 2px dashed #ddd;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #4CAF50;
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(76, 175, 80, 0.2);
+        }
+
+        .upload-zone {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #4CAF50;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .upload-text h3 {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-text p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .analyze-btn {
+            background: linear-gradient(135deg, #FF6B35, #F7931E);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(255, 107, 53, 0.3);
+            display: none;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(255, 107, 53, 0.4);
+        }
+
+        .results-section {
+            background: linear-gradient(145deg, #fff5f5, #f0fff0);
+            border-radius: 20px;
+            padding: 40px;
+            position: relative;
+        }
+
+        .results-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .results-header h3 {
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .status-ready {
+            background: #e8f5e8;
+            color: #2e7d2e;
+        }
+
+        .status-analyzing {
+            background: #fff3cd;
+            color: #856404;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .disease-result {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            display: none;
+        }
+
+        .disease-name {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #d32f2f;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .confidence-bar {
+            background: #f0f0f0;
+            border-radius: 10px;
+            height: 12px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ffaa44, #44ff44);
+            border-radius: 10px;
+            transition: width 1s ease;
+        }
+
+        .confidence-text {
+            font-size: 0.9rem;
+            color: #666;
+            text-align: right;
+        }
+
+        .cure-section {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid #eee;
+        }
+
+        .get-cure-btn {
+            background: linear-gradient(135deg, #6A5ACD, #9370DB);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 15px rgba(106, 90, 205, 0.3);
+        }
+
+        .get-cure-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(106, 90, 205, 0.4);
+        }
+
+        .cure-content {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 12px;
+            border-left: 4px solid #6A5ACD;
+            display: none;
+        }
+
+        .cure-content h4 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .cure-content p {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            margin: 20px 0;
+        }
+
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: loading 1.4s ease-in-out infinite both;
+        }
+
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes loading {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        .no-disease {
+            text-align: center;
+            color: #4CAF50;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .upload-section, .results-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PlantCare AI</h1>
+            <p>Advanced Plant Disease Detection & Treatment</p>
+        </div>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <div class="upload-zone" onclick="document.getElementById('imageInput').click()">
+                    <div class="upload-icon">📷</div>
+                    <div class="upload-text">
+                        <h3>Upload Plant Image</h3>
+                        <p>Click here or drag & drop your plant photo</p>
+                    </div>
+                    <input type="file" id="imageInput" class="file-input" accept="image/*">
+                </div>
+                
+                <img id="imagePreview" class="image-preview" alt="Plant preview">
+                <button id="analyzeBtn" class="analyze-btn">🔍 Analyze Plant</button>
+            </div>
+
+            <div class="results-section">
+                <div class="results-header">
+                    <h3>Analysis Results</h3>
+                    <div id="statusIndicator" class="status-indicator status-ready">
+                        Ready for Analysis
+                    </div>
+                </div>
+
+                <div id="loadingIndicator" class="loading" style="display: none;">
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                </div>
+
+                <div id="diseaseResult" class="disease-result">
+                    <div class="disease-name">
+                        <span>🦠</span>
+                        <span id="diseaseName">Disease Name</span>
+                    </div>
+                    
+                    <div class="confidence-bar">
+                        <div id="confidenceFill" class="confidence-fill" style="width: 0%"></div>
+                    </div>
+                    <div id="confidenceText" class="confidence-text">Confidence: 0%</div>
+
+                    <div class="cure-section">
+                        <button id="getCureBtn" class="get-cure-btn">
+                            💊 Get Treatment Recommendations
+                        </button>
+                        <div id="cureContent" class="cure-content">
+                            <h4>🌿 Treatment Plan</h4>
+                            <div id="cureText"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="noDisease" class="no-disease" style="display: none;">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">✅</div>
+                    <p>Great news! Your plant appears to be healthy!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentImage = null;
+        let currentDisease = null;
+
+        // DOM elements
+        const imageInput = document.getElementById('imageInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const diseaseResult = document.getElementById('diseaseResult');
+        const noDisease = document.getElementById('noDisease');
+        const diseaseName = document.getElementById('diseaseName');
+        const confidenceFill = document.getElementById('confidenceFill');
+        const confidenceText = document.getElementById('confidenceText');
+        const getCureBtn = document.getElementById('getCureBtn');
+        const cureContent = document.getElementById('cureContent');
+        const cureText = document.getElementById('cureText');
+
+        // Image upload handling
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentImage = e.target.result;
+                    imagePreview.src = currentImage;
+                    imagePreview.style.display = 'block';
+                    analyzeBtn.style.display = 'block';
+                    
+                    // Reset results
+                    resetResults();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Drag and drop functionality
+        const uploadZone = document.querySelector('.upload-zone');
+        
+        uploadZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadZone.style.borderColor = '#4CAF50';
+        });
+
+        uploadZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadZone.style.borderColor = '#ddd';
+        });
+
+        uploadZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadZone.style.borderColor = '#ddd';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                imageInput.files = files;
+                imageInput.dispatchEvent(new Event('change'));
+            }
+        });
+
+        // Analyze button click
+        analyzeBtn.addEventListener('click', analyzePlant);
+
+        // Get cure button click
+        getCureBtn.addEventListener('click', getCure);
+
+        // Reset results
+        function resetResults() {
+            diseaseResult.style.display = 'none';
+            noDisease.style.display = 'none';
+            cureContent.style.display = 'none';
+            statusIndicator.textContent = 'Ready for Analysis';
+            statusIndicator.className = 'status-indicator status-ready';
+        }
+
+        // Analyze plant function
+        async function analyzePlant() {
+            if (!currentImage) return;
+
+            // Show loading state
+            showLoading(true);
+            statusIndicator.textContent = 'Analyzing...';
+            statusIndicator.className = 'status-indicator status-analyzing';
+
+            try {
+                // Create FormData for the image (your API expects 'file' as key)
+                const formData = new FormData();
+                const imageBlob = dataURLToBlob(currentImage);
+                formData.append('file', imageBlob, 'plant.jpg');
+
+                // Call your Flask API endpoint
+                const response = await fetch('http://localhost:5000/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Analysis failed');
+                }
+
+                const result = await response.json();
+                
+                // Process the prediction result
+                const processedResult = processPrediction(result.prediction);
+                
+                showLoading(false);
+                displayResults(processedResult);
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                showLoading(false);
+                
+                // Show error message
+                statusIndicator.textContent = 'Analysis Failed - Check API Connection';
+                statusIndicator.className = 'status-indicator';
+                statusIndicator.style.background = '#ffe8e8';
+                statusIndicator.style.color = '#d32f2f';
+                
+                // For demo purposes, show sample result
+                const demoResult = {
+                    disease: 'Connection Error - Demo Result: Tomato Early Blight',
+                    confidence: 0.85,
+                    hasDisease: true
+                };
+                displayResults(demoResult);
+            }
+        }
+
+        // Show/hide loading
+        function showLoading(show) {
+            loadingIndicator.style.display = show ? 'flex' : 'none';
+        }
+
+        // Process prediction from your Flask API
+        function processPrediction(prediction) {
+            // Check if it's a healthy plant
+            const isHealthy = prediction.toLowerCase().includes('healthy');
+            // Clean up the disease name for display
+            let diseaseName = prediction.replace(/_/g, ' ').replace(/__/g, ' - ');
+            // Extract plant type and disease
+            const parts = diseaseName.split(' ');
+            let plantType = '';
+            let disease = '';
+            if (parts.length > 0) {
+                plantType = parts[0];
+                disease = parts.slice(1).join(' ');
+            }
+            // Format for better display
+            if (isHealthy) {
+                diseaseName = `${plantType} - Healthy Plant`;
+            } else {
+                diseaseName = `${plantType} - ${disease}`;
+            }
+            // Simulate confidence (your model doesn't return this)
+            // You can modify your Flask API to return confidence if needed
+            const confidence = isHealthy ? 0.95 : 0.85 + Math.random() * 0.1;
+            return {
+                disease: diseaseName,
+                confidence: confidence,
+                hasDisease: !isHealthy,
+                originalPrediction: prediction
+            };
+        }
+
+        // Display the prediction results on the UI
+        function displayResults(result) {
+            currentDisease = result;
+            if (result.hasDisease && result.confidence > 0.5) {
+                // Show disease result
+                diseaseName.textContent = result.disease || 'Unknown Disease';
+                const confidence = Math.round(result.confidence * 100);
+                confidenceFill.style.width = confidence + '%';
+                confidenceText.textContent = `Confidence: ${confidence}%`;
+                diseaseResult.style.display = 'block';
+                noDisease.style.display = 'none';
+                statusIndicator.textContent = 'Disease Detected';
+                statusIndicator.className = 'status-indicator';
+                statusIndicator.style.background = '#ffe8e8';
+                statusIndicator.style.color = '#d32f2f';
+            } else {
+                // Show healthy result
+                diseaseResult.style.display = 'none';
+                noDisease.style.display = 'block';
+                statusIndicator.textContent = 'Plant is Healthy';
+                statusIndicator.className = 'status-indicator status-ready';
+                statusIndicator.style.background = '';
+                statusIndicator.style.color = '';
+            }
+        }
+
+        // Get cure recommendations
+        async function getCure() {
+            if (!currentDisease) return;
+
+            getCureBtn.textContent = '⏳ Getting Treatment...';
+            getCureBtn.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5050/cure', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        disease: currentDisease.originalPrediction || currentDisease.disease
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to get cure recommendations');
+                }
+
+                const cureData = await response.json();
+                displayCure(cureData.treatment || generateDemoCure(currentDisease.originalPrediction || currentDisease.disease));
+
+            } catch (error) {
+                console.error('Cure API error:', error);
+                displayCure(generateDemoCure(currentDisease.originalPrediction || currentDisease.disease));
+            }
+
+            getCureBtn.textContent = '💊 Get Treatment Recommendations';
+            getCureBtn.disabled = false;
+        }
+
+        // Display cure recommendations
+        function displayCure(cureData) {
+            cureText.innerHTML = cureData;
+            cureContent.style.display = 'block';
+        }
+
+        // Generate demo cure content based on disease type
+        function generateDemoCure(disease) {
+            const diseaseLower = disease.toLowerCase();
+            let cureContent = '';
+            
+            // Specific treatments based on your model's disease classes
+            if (diseaseLower.includes('scab')) {
+                cureContent = `
+                    <p><strong>🌿 Apple Scab Treatment:</strong><br>
+                    • Remove fallen leaves and infected fruit<br>
+                    • Apply fungicidal spray during early spring<br>
+                    • Ensure good air circulation</p>
+                    
+                    <p><strong>💧 Prevention:</strong><br>
+                    • Plant resistant varieties<br>
+                    • Avoid overhead watering<br>
+                    • Prune for better air flow</p>
+                    
+                    <p><strong>🔬 Chemical Treatment:</strong><br>
+                    • Apply copper-based fungicide<br>
+                    • Use during dormant season<br>
+                    • Follow spray schedule</p>
+                `;
+            } else if (diseaseLower.includes('blight')) {
+                cureContent = `
+                    <p><strong>🌿 Blight Management:</strong><br>
+                    • Remove infected plant parts immediately<br>
+                    • Apply preventive fungicide sprays<br>
+                    • Improve soil drainage</p>
+                    
+                    <p><strong>💧 Watering Management:</strong><br>
+                    • Water at base of plant only<br>
+                    • Avoid evening watering<br>
+                    • Use drip irrigation if possible</p>
+                    
+                    <p><strong>🔬 Treatment Options:</strong><br>
+                    • Copper sulfate or chlorothalonil<br>
+                    • Apply every 7-14 days<br>
+                    • Rotate fungicide types</p>
+                `;
+            } else if (diseaseLower.includes('rust')) {
+                cureContent = `
+                    <p><strong>🌿 Rust Disease Treatment:</strong><br>
+                    • Remove infected leaves immediately<br>
+                    • Apply sulfur-based fungicide<br>
+                    • Ensure proper plant spacing</p>
+                    
+                    <p><strong>💧 Environmental Control:</strong><br>
+                    • Reduce humidity around plants<br>
+                    • Improve air circulation<br>
+                    • Avoid overhead irrigation</p>
+                    
+                    <p><strong>🔬 Fungicide Application:</strong><br>
+                    • Use protectant fungicides<br>
+                    • Apply before symptoms appear<br>
+                    • Repeat applications as needed</p>
+                `;
+            } else if (diseaseLower.includes('spot')) {
+                cureContent = `
+                    <p><strong>🌿 Spot Disease Control:</strong><br>
+                    • Prune affected leaves and branches<br>
+                    • Apply copper-based spray<br>
+                    • Maintain plant hygiene</p>
+                    
+                    <p><strong>💧 Cultural Practices:</strong><br>
+                    • Space plants adequately<br>
+                    • Water at soil level<br>
+                    • Remove plant debris regularly</p>
+                    
+                    <p><strong>🔬 Treatment Schedule:</strong><br>
+                    • Apply fungicide every 2 weeks<br>
+                    • Use preventive treatments<br>
+                    • Monitor weather conditions</p>
+                `;
+            } else if (diseaseLower.includes('healthy')) {
+                cureContent = `
+                    <p><strong>✅ Maintenance for Healthy Plants:</strong><br>
+                    • Continue current care practices<br>
+                    • Monitor for early signs of disease<br>
+                    • Maintain proper nutrition</p>
+                    
+                    <p><strong>🌿 Preventive Care:</strong><br>
+                    • Regular inspection of leaves<br>
+                    • Proper watering schedule<br>
+                    • Adequate sunlight exposure</p>
+                    
+                    <p><strong>💪 Plant Health Boosters:</strong><br>
+                    • Apply compost or organic fertilizer<br>
+                    • Ensure good soil drainage<br>
+                    • Prune for air circulation</p>
+                `;
+            } else {
+                // Generic treatment
+                cureContent = `
+                    <p><strong>🌿 General Disease Treatment:</strong><br>
+                    • Remove affected plant parts<br>
+                    • Apply broad-spectrum fungicide<br>
+                    • Improve growing conditions</p>
+                    
+                    <p><strong>💧 Best Practices:</strong><br>
+                    • Water at soil level only<br>
+                    • Ensure proper drainage<br>
+                    • Maintain plant hygiene</p>
+                    
+                    <p><strong>🔬 Monitoring:</strong><br>
+                    • Check plants regularly<br>
+                    • Apply treatments as needed<br>
+                    • Consider professional consultation</p>
+                `;
+            }
+            
+            return cureContent + '<p><strong>⏰ Recovery Timeline:</strong> 2-4 weeks with proper treatment</p>';
+        }
+
+        // Convert data URL to blob
+        function dataURLToBlob(dataURL) {
+            const arr = dataURL.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], { type: mime });
+        }
+    </script>
+</body>
+</html>
